@@ -1,0 +1,52 @@
+# python
+__pycache__/
+*.pyc
+*.egg-info/
+.venv/
+build/
+dist/
+
+# pipeline artifacts
+/TMP/
+/output/
+*_flat.tex
+
+# data
+/input/*
+!/input/.gitkeep
+!/input/Figures/
+/input/Figures/*
+!/input/Figures/.gitkeep
+/examples/
+*.docx
+*.docs
+*.tex
+*.pdf
+*.png
+*.jpg
+*.jpeg
+*.svg
+*.tiff
+
+# latex artifacts
+*.aux
+*.log
+*.toc
+*.out
+*.bbl
+*.blg
+*.synctex.gz
+*.fls
+*.fdb_latexmk
+
+# editor & OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# trash
+.trash/
+~WRL*.tmp
+~$*.docx

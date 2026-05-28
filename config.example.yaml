@@ -1,0 +1,90 @@
+# docconvert configuration — copy to config.yaml and edit.
+
+# --- directories (relative to the project root) ---
+paths:
+  input_dir: input
+  tmp_dir: TMP
+  output_dir: output
+
+# --- sources (filenames inside input_dir) ---
+main_tex: main.tex
+bibliography_bib: bibliography.bib
+
+# --- final output ---
+output_name: thesis        # → output/thesis_2026-05-28_14-30-22.docx
+cleanup_tmp: true          # remove TMP/ after successful build (override with --keep-tmp)
+
+# --- title page (prepared in Word) ---
+titlepage_docx: titlist.docx
+
+# --- appendices (any number, merged in order) ---
+#   source: .tex or .docx inside input_dir
+#   convert: true  → run latexpand + pandoc on the .tex source, then merge
+#   convert: false → take the .docx source as-is, then merge
+appendices:
+  - code: "ПРИЛОЖЕНИЕ А"
+    title: "Графическая часть ВКР"
+    source: appendix_a.docx
+    convert: false
+  - code: "ПРИЛОЖЕНИЕ Б"
+    title: "Листинги кода обучения"
+    source: appendix_b.tex
+    convert: true
+
+# --- pipeline steps (true = run, false = skip) ---
+# Order is fixed by docconvert/pipeline.py; this map only toggles each step.
+steps:
+  build_pdf: true
+  build_style_template: true
+  flatten_tex: true
+  run_pandoc: true
+  insert_toc: true
+  merge_appendices: true
+  enforce_styles: true
+  fix_tables: true
+  fix_blocks: true
+  fix_sections: true
+  number_equations: true
+  align_where_blocks: true
+  build_bibliography: true
+  prepend_titlepage: true
+  fill_referencat: true
+  finalize: true
+
+# --- localized strings (Russian / GOST defaults) ---
+strings:
+  abstract_section_aliases: ["РЕФЕРАТ", "АННОТАЦИЯ"]
+  intro_section: "ВВЕДЕНИЕ"
+  conclusion_section: "ЗАКЛЮЧЕНИЕ"
+  references_section: "СПИСОК ИСПОЛЬЗОВАННЫХ ИСТОЧНИКОВ"
+  figure_label: "Рисунок"
+  table_label: "Таблица"
+  where_keyword: "где"
+  rpz_line_prefix: "Расчетно-пояснительная записка:"
+
+# --- pandoc invocation ---
+pandoc:
+  crossref_yaml: crossref.yaml   # path relative to project root; templates/ ones used by default
+  csl: numeric.csl
+  reference_doc: reference.docx  # produced by build_style_template into TMP/
+  extra_args: ["--number-sections"]
+
+# --- GOST style parameters (used by build_style_template) ---
+style:
+  font: "Times New Roman"
+  font_size_pt: 14
+  line_spacing: 1.5
+  margins_mm:
+    left: 30
+    right: 10
+    top: 20
+    bottom: 20
+  paragraph_indent_cm: 1.25
+
+# --- page numbering (used by fix_sections) ---
+# Raw OOXML <w:pgNumType w:start="..."> value on the first sectPr.
+# After prepend_titlepage glues N title pages on top, the body's first numbered
+# page becomes (start_at + N). The current GOST thesis title page is 5 pages
+# and the abstract should display "6", so start_at=5.
+page_numbering:
+  start_at: 5

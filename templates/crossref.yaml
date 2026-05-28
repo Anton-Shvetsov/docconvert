@@ -1,0 +1,7 @@
+figureTitle: "Рисунок"
+tableTitle: "Таблица"
+titleDelim: " — "
+figLabels: arabic
+tableLabels: arabic
+eqnPrefix: ""
+eqLabels: arabic

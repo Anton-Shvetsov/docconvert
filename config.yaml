@@ -1,0 +1,68 @@
+# docconvert configuration for the current thesis.
+
+paths:
+  input_dir: input
+  tmp_dir: TMP
+  output_dir: output
+
+main_tex: main.tex
+bibliography_bib: bibliography.bib
+
+output_name: thesis
+cleanup_tmp: true
+
+titlepage_docx: titlist.docx
+
+appendices:
+  - code: "ПРИЛОЖЕНИЕ А"
+    title: "Графическая часть ВКР"
+    source: appendix_a.docx
+    convert: false
+
+steps:
+  build_pdf: true
+  build_style_template: true
+  flatten_tex: true
+  run_pandoc: true
+  insert_toc: true
+  merge_appendices: true
+  enforce_styles: true
+  fix_tables: true
+  fix_blocks: true
+  fix_sections: true
+  number_equations: true
+  align_where_blocks: true
+  build_bibliography: true
+  prepend_titlepage: true
+  fill_referencat: true
+  finalize: true
+
+strings:
+  abstract_section_aliases: ["РЕФЕРАТ", "АННОТАЦИЯ"]
+  intro_section: "ВВЕДЕНИЕ"
+  conclusion_section: "ЗАКЛЮЧЕНИЕ"
+  references_section: "СПИСОК ИСПОЛЬЗОВАННЫХ ИСТОЧНИКОВ"
+  figure_label: "Рисунок"
+  table_label: "Таблица"
+  where_keyword: "где"
+  rpz_line_prefix: "Расчетно-пояснительная записка:"
+
+pandoc:
+  crossref_yaml: crossref.yaml
+  csl: numeric.csl
+  reference_doc: reference.docx
+  extra_args: ["--number-sections"]
+
+style:
+  font: "Times New Roman"
+  font_size_pt: 14
+  line_spacing: 1.5
+  margins_mm:
+    left: 30
+    right: 15
+    top: 20
+    bottom: 20
+  paragraph_indent_cm: 1.25
+
+page_numbering:
+  start_at: 5
