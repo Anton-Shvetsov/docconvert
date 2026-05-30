@@ -155,41 +155,61 @@ def _parse_bib(path: Path):
 # --------------------------------------------------
 
 def _initials(first_str: str) -> str:
+    """``Kristof T.`` -> ``K. T.`` (space-separated, each with a period)."""
     parts = first_str.strip().split()
     out = []
     for p in parts:
         p = p.strip(".")
         if p:
             out.append(p[0].upper() + ".")
-    return "".join(out)
+    return " ".join(out)
 
 
-def _format_author(raw: str) -> str:
+def _split_name(raw: str) -> tuple[str, str]:
+    """Return ``(surname, initials)`` for either ``Last, First`` or ``First Last``."""
     raw = raw.strip()
-    if not raw:
-        return ""
     if "," in raw:
         last, _, rest = raw.partition(",")
-        ins = _initials(rest.strip())
-        return f"{last.strip()} {ins}" if ins else last.strip()
+        return last.strip(), _initials(rest.strip())
     parts = raw.split()
     if len(parts) == 1:
-        return parts[0]
-    last = parts[-1]
-    first = " ".join(parts[:-1])
-    ins = _initials(first)
-    return f"{last} {ins}" if ins else last
+        return parts[0], ""
+    return parts[-1], _initials(" ".join(parts[:-1]))
 
 
-def _authors_gost(raw: str, max_full: int = 3) -> str:
-    if not raw:
+def _split_authors(raw: str) -> tuple[list[str], bool]:
+    """Split on ``and``; drop a literal ``others`` token and flag it (bibtex ``and others``)."""
+    parts = [a.strip() for a in re.split(r"\s+and\s+", raw, flags=re.IGNORECASE) if a.strip()]
+    cleaned, has_others = [], False
+    for p in parts:
+        if p.lower() == "others":
+            has_others = True
+        else:
+            cleaned.append(p)
+    return cleaned, has_others
+
+
+def _lead_author(raw: str) -> str:
+    """Heading author per ГОСТ: first author only, ``Surname, Initials``."""
+    parts, _ = _split_authors(raw)
+    if not parts:
         return ""
-    parts = [a.strip() for a in re.split(r"\s+and\s+", raw, flags=re.IGNORECASE)]
-    et_al = len(parts) > max_full
-    shown = [_format_author(p) for p in parts[:max_full]]
+    last, ini = _split_name(parts[0])
+    return f"{last}, {ini}" if ini else last
+
+
+def _authors_list(raw: str, max_full: int = 3) -> str:
+    """Author statement after ``/``: up to ``max_full`` as ``Initials Surname``, then ``et al.``."""
+    parts, has_others = _split_authors(raw)
+    if not parts:
+        return ""
+    shown = []
+    for p in parts[:max_full]:
+        last, ini = _split_name(p)
+        shown.append(f"{ini} {last}".strip())
     s = ", ".join(shown)
-    if et_al:
-        s += " [et al.]"
+    if has_others or len(parts) > max_full:
+        s += " et al."
     return s
 
 
@@ -197,39 +217,43 @@ def _format_entry(n: int, etype: str, fields: dict) -> str:
     def f(k):
         return fields.get(k, "").strip()
 
-    auth = _authors_gost(f("author") or f("editor"))
+    author_raw = f("author") or f("editor")
+    lead = _lead_author(author_raw)
+    authlist = _authors_list(author_raw)
     title = f("title") or "(no title)"
     year = f("year")
     url = f("url") or f("howpublished")
-    if auth:
-        auth_prefix = f"{auth} " if auth.endswith(".") else f"{auth}. "
+    pages = re.sub(r"(\d)\s*-\s*(\d)", r"\1–\2", f("pages"))
+
+    # Heading author (first author, ``Surname, Initials``) + title.
+    if lead:
+        lead_p = lead if lead.endswith(".") else lead + "."
+        head = f"{lead_p} {title}"
     else:
-        auth_prefix = ""
+        head = title
 
     if etype == "article":
         journal = f("journal")
         vol = f("volume")
         num = f("number")
-        pages = f("pages")
-        s = f"{auth_prefix}{title}"
+        s = head
+        if authlist:
+            s += f" / {authlist}"
         if journal:
             s += f" // {journal}"
         if year:
             s += f". — {year}"
-        loc = []
-        if vol:
-            loc.append(f"Vol. {vol}")
-        if num:
-            loc.append(f"No. {num}")
+        volnum = ", ".join(x for x in [f"Vol. {vol}" if vol else "", f"No. {num}" if num else ""] if x)
+        if volnum:
+            s += f". — {volnum}"
         if pages:
-            loc.append(f"P. {pages}")
-        if loc:
-            s += ". — " + ", ".join(loc)
+            s += f". — P. {pages}"
     elif etype in ("book", "inbook"):
         publisher = f("publisher")
         address = f("address")
-        pages = f("pages")
-        s = f"{auth_prefix}{title}"
+        s = head
+        if authlist:
+            s += f" / {authlist}"
         loc = ", ".join(x for x in [address, publisher] if x)
         if loc:
             s += f". — {loc}"
@@ -239,8 +263,9 @@ def _format_entry(n: int, etype: str, fields: dict) -> str:
             s += f". — {pages} с."
     elif etype in ("inproceedings", "incollection", "conference"):
         booktitle = f("booktitle")
-        pages = f("pages")
-        s = f"{auth_prefix}{title}"
+        s = head
+        if authlist:
+            s += f" / {authlist}"
         if booktitle:
             s += f" // {booktitle}"
         if year:
@@ -249,15 +274,20 @@ def _format_entry(n: int, etype: str, fields: dict) -> str:
             s += f". — P. {pages}"
     elif etype == "phdthesis":
         school = f("school")
-        s = f"{auth_prefix}{title}"
+        s = head
+        if authlist:
+            s += f" / {authlist}"
         if school:
             s += f". — {school}"
         if year:
             s += f", {year}"
     else:
-        s = f"{auth_prefix}{title} [Электронный ресурс]"
+        s = f"{head} [Электронный ресурс]"
+        if authlist:
+            block = authlist if authlist.endswith(".") else authlist + "."
+            s += f" / {block}"
         if url:
-            s += f". — URL: {url}"
+            s += f" — URL: {url}" if authlist else f". — URL: {url}"
         urldate = f("urldate")
         if urldate:
             try:
